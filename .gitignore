@@ -1,0 +1,8 @@
+
+/plugins
+/tmp
+*.meta
+#*.unity
+compile_scripts.sh
+
+.DS_Store

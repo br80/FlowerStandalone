@@ -29,10 +29,6 @@ public class Flower : MonoBehaviour {
     flowerDNA = JSON.Parse(flowerDNAString);
     UpdateWindVariables();
     ShowFlower();
-
-
-    FlowerGrowMenu.Show();
-
   }
 
   public string GetFlowerState() {

@@ -18,17 +18,21 @@ public class Flower : MonoBehaviour {
   private bool isDehydrated = false;
 
 
-  void Start() {
+  void Awake() {
     Initialize();
   }
 
   public void Initialize() {
-    string flowerDataString = "{\"size\":\"5.99\", \"health\":\"1\", \"waters\":\"0\", \"veg_age\":\"3\", \"maturity\":\"1\", \"sunshine\":\"0\", \"bushiness\":\"11.97\", \"flower_age\":\"21.7458293272222\", \"fruit_size\":\"0\", \"flower_size\":\"2\", \"fruit_rating\":\"63.7336000000001\", \"fruit_sweetness\":\"573.6024\", \"flower_brightness\":\"286.8012\", \"flower_petal_count\":\"4\"}";
+    string flowerDataString = "{\"size\":\"10\",\"health\":\"1\",\"veg_age\":\"3\", \"maturity\":\"1\", \"sunshine\":\"0\", \"bushiness\":\"11.97\", \"flower_age\":\"21.7458293272222\", \"fruit_size\":\"0\", \"flower_size\":\"2\", \"fruit_sweetness\":\"573.6024\", \"flower_brightness\":\"286.8012\", \"flower_petal_count\":\"8\"}";
     string flowerDNAString = "{\"c_0\":\"#BFE\", \"c_1\":\"#49F\", \"c_2\":\"#0F8\"}";
     flowerData = JSON.Parse(flowerDataString);
     flowerDNA = JSON.Parse(flowerDNAString);
     UpdateWindVariables();
     ShowFlower();
+
+
+    FlowerGrowMenu.Show();
+
   }
 
   public string GetFlowerState() {
@@ -37,30 +41,6 @@ public class Flower : MonoBehaviour {
 
   public string GetFlowerName() {
     return "Flowey";
-  }
-
-  public int GetFruitRating() {
-    if (GetFlowerState() != "MATURE") {
-      return 0;
-    } else {
-      return flowerData["nodes"][flowerData["nodes"].AsArray.Count - 1]["fruit"]["rating"].AsInt;
-    }
-  }
-
-  public void ShowFriendFlower(JSONNode friendFlowerData, JSONNode friendFlowerDNA, string flowerState) {
-
-    flowerData = friendFlowerData;
-    flowerDNA = friendFlowerDNA;
-    UpdateWindVariables();
-
-    foreach (Transform child in transform) {
-      GameObject.Destroy(child.gameObject);
-    }
-
-    if (friendFlowerData["fruit_type"].ToStringNoQuotes() == "CHERRY") {
-      drawCherry(flowerState);
-    }
-
   }
 
   public void ShowFlower() {
@@ -72,13 +52,6 @@ public class Flower : MonoBehaviour {
     drawCherry(GetFlowerState());
   }
 
-  public float GetFlowerHeight() {
-    return flowerHeight;
-  }
-
-  public float GetFlowerWidth() {
-    return flowerWidth;
-  }
 
   private void drawCherry(string flowerState) {
     Vector3 rootPosition = transform.position;
@@ -394,208 +367,6 @@ public class Flower : MonoBehaviour {
 
       }
     }
-  }
-
-
-  private void createVegetation() {
-    Vector3 rootPosition = transform.position;
-    float health = flowerData["health"].AsFloat;
-    Color unhealthyColor = new Color(0.6f, 0.4f, 0);
-
-    Color stemColorBase;
-    ColorUtility.TryParseHtmlString ("#42EE00", out stemColorBase);
-    Color stemColorTip;
-    ColorUtility.TryParseHtmlString ("#BBFF42", out stemColorTip);
-    Color leafColor;
-    ColorUtility.TryParseHtmlString ("#42FF42", out leafColor);
-
-    stemColorBase = Color.Lerp(unhealthyColor, stemColorBase, health);
-    stemColorTip = Color.Lerp(unhealthyColor, stemColorTip, health);
-    leafColor = Color.Lerp(unhealthyColor, leafColor, health);
-
-    bool dehydrated = false;  // TODO: Reinstate dehydration?
-    if (dehydrated) {
-      leafColor = new Color(0.6f, 0.4f, 0);
-    }
-
-    float totalStemHeight = 0;
-    for (int nodes_i = 0 ; nodes_i < flowerData["nodes"].AsArray.Count ; nodes_i++) {
-      totalStemHeight += flowerData["nodes"][nodes_i]["stem"]["length"].AsFloat;
-    }
-
-    float localStemHeight = 0;
-    GameObject nodeRoot = gameObject;
-    GameObject previousNodeRoot;
-    float previousStemLength = 0;
-    nodeRoots = new GameObject[flowerData["nodes"].AsArray.Count];
-    for (int nodes_i = 0 ; nodes_i < flowerData["nodes"].AsArray.Count ; nodes_i++) {
-      JSONNode node = flowerData["nodes"][nodes_i];
-      previousNodeRoot = nodeRoot;
-      nodeRoot = new GameObject("nodeRoot_" + nodes_i);
-      nodeRoot.transform.parent = previousNodeRoot.transform;
-      nodeRoot.transform.localPosition = new Vector3(0, previousStemLength, 0f);
-      nodeRoots[nodes_i] = nodeRoot;
-
-      float stemLength = node["stem"]["length"].AsFloat;
-      float stemWidth = node["stem"]["width"].AsFloat;
-      previousStemLength = stemLength;
-
-      float basePercentage = localStemHeight / totalStemHeight;
-      float tipPercentage = (localStemHeight + stemLength) / totalStemHeight;
-      Color localStemColorBase = Color.Lerp(stemColorBase, stemColorTip, basePercentage);
-      Color localStemColorTip = Color.Lerp(stemColorBase, stemColorTip, tipPercentage);
-
-      GameObject stemObject = (GameObject) Instantiate(Resources.Load<GameObject>("Prefabs/StemPrefab"), rootPosition, Quaternion.identity);
-      stemObject.name = "Stem_" + nodes_i;
-      stemObject.transform.localScale = new Vector3(stemWidth, stemLength, 1);
-      stemObject.GetComponent<MeshRenderer>().material.SetColor("_ColorBase", localStemColorBase);
-      stemObject.GetComponent<MeshRenderer>().material.SetColor("_ColorTip", localStemColorTip);
-      stemObject.transform.parent = nodeRoot.transform;
-
-      localStemHeight += stemLength;
-      rootPosition += new Vector3(0, stemLength, 0);
-
-      if (nodes_i == flowerData["nodes"].AsArray.Count - 1) {
-        GameObject stemTipObject = (GameObject) Instantiate(Resources.Load<GameObject>("Prefabs/LeafPrefab"), rootPosition, Quaternion.identity);
-        stemTipObject.name = "StemTip";
-        stemTipObject.transform.localScale = new Vector3(stemWidth * 2, stemWidth * 2, 1);
-        stemTipObject.GetComponent<MeshRenderer>().material.SetColor("_ColorBase", localStemColorTip);
-        stemTipObject.GetComponent<MeshRenderer>().material.SetColor("_ColorTip", localStemColorTip);
-        stemTipObject.transform.parent = nodeRoot.transform;
-      }
-
-      if (node["leaf"] != null) {
-        // Draw Leaves
-        for (int leaves_i = 0 ; leaves_i < 2 ; leaves_i++) {
-          JSONNode leaf_data = node["leaf"];
-          float angle = leaf_data["angle"].AsFloat;
-          float width = leaf_data["width"].AsFloat;
-          float length = leaf_data["length"].AsFloat;
-
-          if (dehydrated) {
-            width /= 2;
-            angle = 150;
-          }
-
-          angle *= (1 - 2 * leaves_i);  // second leaf has negative angle
-
-          GameObject leafObject = (GameObject) Instantiate(Resources.Load<GameObject>("Prefabs/LeafPrefab"), rootPosition + new Vector3(0, 0, -0.01f), Quaternion.identity);
-          leafObject.name = "Leaf_" + leaves_i + "_" + nodes_i;
-          leafObject.transform.localScale = new Vector3(width, length, 1);
-          leafObject.transform.localEulerAngles = new Vector3(0, 0, angle);
-          leafObject.GetComponent<MeshRenderer>().material.SetColor("_ColorBase", localStemColorTip);
-          leafObject.GetComponent<MeshRenderer>().material.SetColor("_ColorTip", leafColor);
-          leafObject.transform.parent = nodeRoot.transform;
-        }
-      }
-
-      if (node["bud"] != null) {
-        // Draw Bud
-        JSONNode bud_data = node["bud"];
-        float width = bud_data["width"].AsFloat;
-        float length = bud_data["length"].AsFloat;
-
-        GameObject budObject = (GameObject) Instantiate(Resources.Load<GameObject>("Prefabs/PetalPrefab"), rootPosition + new Vector3(0, 0, -0.01f), Quaternion.identity);
-        budObject.name = "Bud";
-        budObject.transform.localScale = new Vector3(width, length, 1);
-        budObject.GetComponent<MeshRenderer>().material.SetColor("_ColorBase", localStemColorTip);
-        budObject.GetComponent<MeshRenderer>().material.SetColor("_ColorTip", leafColor);
-        budObject.transform.parent = nodeRoot.transform;
-      }
-
-      if (node["flower"] != null) {
-        Color stamenColor;
-        ColorUtility.TryParseHtmlString (node["flower"]["stamen_color"].ToStringNoQuotes(), out stamenColor);
-        int stamenCount = node["flower"]["stamen_count"].AsInt;
-        float stamenLength = node["flower"]["stamen_length"].AsFloat;
-        float stamenWidth = node["flower"]["stamen_width"].AsFloat;
-        Color petalColor;
-        ColorUtility.TryParseHtmlString (node["flower"]["petal_color"].ToStringNoQuotes(), out petalColor);
-        Color petalColorTip = petalColor;
-        if (node["flower"]["petal_color_secondary"] != null) {
-          ColorUtility.TryParseHtmlString (node["flower"]["petal_color_secondary"].ToStringNoQuotes(), out petalColorTip);
-        }
-        if (dehydrated) {
-          petalColorTip = Color.Lerp(petalColorTip, new Color(0.6f, 0.4f, 0), 0.5f);
-        }
-        petalColor = Color.Lerp(unhealthyColor, petalColor, health);
-        petalColorTip = Color.Lerp(unhealthyColor, petalColorTip, health);
-        stamenColor = Color.Lerp(unhealthyColor, stamenColor, health);
-        petalColorTip.a = 0.5f;
-        float petalCount = node["flower"]["petal_count"].AsInt;
-        float petalLength = node["flower"]["petal_length"].AsFloat;
-        float petalWidth = node["flower"]["petal_width"].AsFloat;
-
-        float petalAngle = 360f / petalCount;
-        float currentPetalAngle = 0;
-
-        for (int i = 0 ; i < petalCount ; i++) {
-          GameObject petalObject = (GameObject) Instantiate(Resources.Load<GameObject>("Prefabs/PetalPrefab"), rootPosition + new Vector3(0, 0, -0.15f), Quaternion.identity);
-          petalObject.name = "Petal_" + i;
-          petalObject.transform.localScale = new Vector3(petalWidth, petalLength, 1);
-          petalObject.transform.localEulerAngles = new Vector3(0, 0, currentPetalAngle);
-          petalObject.GetComponent<MeshRenderer>().material.SetColor("_ColorBase", petalColor);
-          petalObject.GetComponent<MeshRenderer>().material.SetColor("_ColorTip", petalColorTip);
-          petalObject.transform.parent = nodeRoot.transform;
-          currentPetalAngle += petalAngle;
-        }
-
-        float stamenAngle = 360f / stamenCount;
-        float currentStamenAngle = 0;
-        for (int i = 0 ; i < stamenCount ; i++) {
-          GameObject stamenObject = (GameObject) Instantiate(Resources.Load<GameObject>("Prefabs/LeafPrefab"), rootPosition+ new Vector3(0, 0, -0.16f), Quaternion.identity);
-          stamenObject.name = "Stamen_" + i;
-          stamenObject.transform.localScale = new Vector3(stamenWidth, stamenLength, 1);
-          stamenObject.transform.localEulerAngles = new Vector3(0, 0, currentStamenAngle);
-          stamenObject.GetComponent<MeshRenderer>().material.SetColor("_ColorBase", petalColor);
-          stamenObject.GetComponent<MeshRenderer>().material.SetColor("_ColorTip", stamenColor);
-          stamenObject.transform.parent = nodeRoot.transform;
-          currentStamenAngle += stamenAngle;
-        }
-
-        if (node["fruit"] != null) {
-          float fruitStemLength = node["fruit"]["stem_length"].AsFloat;
-          float fruitSize = node["fruit"]["size"].AsFloat;
-          float fruitSweetness = node["fruit"]["sweetness"].AsFloat;
-          int numFruit = node["fruit"]["count"].AsInt;
-          float angleBetweenFruit = Mathf.Max(2 * Mathf.Atan(fruitSize / (2 * fruitStemLength)) * Mathf.Rad2Deg, 15); // 15 min angle
-          float currentFruitAngle = 180 - ((numFruit - 1) * angleBetweenFruit) / 2;
-
-          float sweetnessLerpValue = (fruitSweetness / 100);
-          Color fruitColorTip = Color.Lerp(stemColorTip, Color.Lerp(Color.red, Color.black, sweetnessLerpValue), sweetnessLerpValue);
-          Color fruitColorBase = Color.Lerp(stemColorTip, Color.red, sweetnessLerpValue);
-
-          GameObject fruitObject;
-          GameObject fruitStemObject;
-          for (int i = 0 ; i < numFruit ; i++) {
-            if (node["fruit"]["type"].ToStringNoQuotes() == "CHERRY") {
-              fruitObject = (GameObject) Instantiate(Resources.Load<GameObject>("Prefabs/CherryPrefab"), rootPosition + new Vector3(0, 0, -0.17f), Quaternion.identity);
-              fruitObject.name = "Fruit_" + i;
-            } else {
-              Debug.Log("ERROR: INVALID FRUIT " + node["fruit"]["type"].ToStringNoQuotes());
-              break;
-            }
-            float currentFruitAngleRadians = (currentFruitAngle + 90) * Mathf.Deg2Rad;
-            fruitStemObject = (GameObject) Instantiate(Resources.Load<GameObject>("Prefabs/StemPrefab"), rootPosition + new Vector3(0,0,-0.18f), Quaternion.identity);
-            fruitStemObject.name = "FruitStem_" + i;
-            fruitStemObject.transform.localScale = new Vector3(Mathf.Max(fruitStemLength / 16, 0.1f), fruitStemLength, 1);
-            fruitStemObject.transform.localEulerAngles = new Vector3(0, 0, currentFruitAngle);
-            fruitStemObject.GetComponent<MeshRenderer>().material.SetColor("_ColorBase", stemColorBase);
-            fruitStemObject.GetComponent<MeshRenderer>().material.SetColor("_ColorTip", stemColorTip);
-            fruitStemObject.transform.parent = nodeRoot.transform;
-            fruitObject.transform.localScale = Vector3.one * fruitSize;
-            fruitObject.transform.localPosition = rootPosition + (new Vector3(Mathf.Cos(currentFruitAngleRadians), Mathf.Sin(currentFruitAngleRadians), -0.19f/fruitStemLength)) * fruitStemLength;
-            fruitObject.GetComponent<MeshRenderer>().material.SetColor("_ColorBase", fruitColorBase);
-            fruitObject.GetComponent<MeshRenderer>().material.SetColor("_ColorTip", fruitColorTip);
-            fruitObject.transform.localEulerAngles = new Vector3(0, 0, currentFruitAngle + 180);
-            fruitObject.transform.parent = nodeRoot.transform;
-            currentFruitAngle += angleBetweenFruit;
-          }
-        }
-
-      }
-    }
-    doFlowerWave();
   }
 
   public void UpdateWindVariables() {
